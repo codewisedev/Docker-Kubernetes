@@ -1,0 +1,26 @@
+version: '3'
+
+services:
+  rabbitmq:
+    image: rabbitmq:${RABBITMQ_VERSION}-management
+    networks:
+      - rabbitmq_network
+    ports:
+      - '${RABBITMQ_PORT}:${RABBITMQ_PORT}'
+      - '${RABBITMQ_MANAGEMENT_PORT}:${RABBITMQ_MANAGEMENT_PORT}'
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      RABBITMQ_ERLANG_COOKIE: somecookievalue
+      RABBITMQ_DISK_FREE_LIMIT: '{mem_relative, 0.5}'
+      RABBITMQ_HIPE_COMPILE: 1
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: '-rabbit my_rabbit@localhost'
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+networks:
+  rabbitmq_network:
+    driver: bridge
+
+volumes:
+  rabbitmq_data:

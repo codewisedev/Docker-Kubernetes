@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  redis:
+    container_name: rediscontainer
+    image: redis:${REDIS_VERSION}
+    restart: always
+    expose:
+      - ${REDIS_PORT}
+    ports:
+      - ${REDIS_PORT}:${REDIS_PORT}
+    volumes:
+      - vol_redis:/data
+    environment:
+      - ALLOW_EMPTY_PASSWORD=no
+      - REDIS_PASSWORD=${REDIS_USERNAME}:${REDIS_PASSWORD}
+      - REDIS_AOF_ENABLED=no
+      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+    networks:
+      - net_redis
+
+networks:
+  net_redis:
+    driver: bridge
+
+volumes:
+  vol_redis:
+    name: redis_data
+    external: true

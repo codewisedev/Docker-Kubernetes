@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-deployment
+spec:
+  selector:
+    matchLabels:
+      app: redis
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis: $(REDIS_VERSION)
+          command: ["redis-server"]
+          args: ["--requirepass", $(REDIS_PASSWORD), "--appendonly", "yes"]
+          ports:
+            - containerPort: $(REDIS_PORT)
+              name: redis
+          env:
+            - name: REDIS_VERSION
+              value: <redis_version>
+            - name: REDIS_PORT
+              value: <redis_port>
+            - name: REDIS_PASSWORD
+              value: <redis_password>
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+      volumes:
+        - name: redis-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+spec:
+  selector:
+    app: redis
+  type: <ClusterIP | LoadBalancer>
+  ports:
+    - protocol: TCP
+      port: <redis_port>
+      targetPort: <redis_port>
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: redis-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+    - host: <redis.example.com>
+      http:
+        paths:
+          - path: /redis
+            pathType: Prefix
+            backend:
+              service:
+                name: redis-service
+                port:
+                  number: <redis_port>

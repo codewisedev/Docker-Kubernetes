@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak-deployment
+  labels:
+    app: keycloak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak-container
+          image: keycloak:<keycloak_version>
+          volumeMounts:
+            - name: config-volume
+              mountPath: /opt/keycloak/conf/
+          env:
+            - name: KEYCLOAK_ADMIN_USER
+              value: <keycloak_username>
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              value: <keycloak_password>
+            - name: KEYCLOAK_DATABASE_HOST
+              value: <postgres_host>
+            - name: KEYCLOAK_DATABASE_PORT
+              value: <postgres_port>
+            - name: KEYCLOAK_DATABASE_NAME
+              value: <postgres_db>
+            - name: KEYCLOAK_DATABASE_USER
+              value: <postgres_username>
+            - name: KEYCLOAK_DATABASE_PASSWORD
+              value: <postgres_password>
+          ports:
+            - containerPort: <keycloak_port>
+          resources:
+            limits:
+              memory: '2Gi'
+      volumes:
+        - name: config-volume
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-service
+spec:
+  selector:
+    app: keycloak
+  ports:
+    - name: http
+      protocol: TCP
+      port: <keycloak_exclude_port>
+      targetPort: <keycloak_port>
+  type: LoadBalancer

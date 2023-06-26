@@ -2,6 +2,7 @@
 
 ## Stacks List
 
+- APM Server
 - KeyCloak
 - RabbitMQ
 - Redis

@@ -2,6 +2,14 @@
 
 - Install kubectl
 
+## After start keycloak pod, then run this commands:
+
+Enter to keycloak postgres container:
+
+```
+UPDATE realm SET ssl_required='NONE' WHERE id = 'master';
+```
+
 ## Change these fields by your specified config:
 
 - `keycloak_version` lines: 19

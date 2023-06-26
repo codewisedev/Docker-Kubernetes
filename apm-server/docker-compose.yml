@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  elasticsearch:
+    container_name: elasticsearchcontainer
+    image: elasticsearch:8.5.3
+    environment:
+      - xpack.security.enabled=true
+      - xpack.security.authc.api_key.enabled=true
+      - discovery.type=single-node
+    networks:
+      - dev
+    ports:
+      - ${ELASTIC_SEARCH_PORT}:${ELASTIC_SEARCH_PORT}
+
+  kibana:
+    container_name: kibanacontainer
+    image: kibana:8.5.3
+    environment:
+      - ELASTICSEARCH_HOSTS=http://${ELASTIC_SEARCH_CONTAINER}:${ELASTIC_SEARCH_PORT}
+    networks:
+      - dev
+    depends_on:
+      - elasticsearch
+    ports:
+      - ${KIBANA_PORT}:${KIBANA_PORT}
+
+  apm-server:
+    container_name: apmcontainer
+    image: elastic/apm-server:8.5.3
+    cap_add: ['CHOWN', 'DAC_OVERRIDE', 'SETGID', 'SETUID']
+    cap_drop: ['ALL']
+    ports:
+      - ${APM_SERVER_PORT}:${APM_SERVER_PORT}
+    command: >
+      apm-server -e
+        -E apm-server.rum.enabled=true
+        -E setup.kibana.host=${KIBANA_CONTAINER}:${KIBANA_PORT}
+        -E setup.template.settings.index.number_of_replicas=0
+        -E apm-server.kibana.enabled=true
+        -E apm-server.kibana.host=${KIBANA_CONTAINER}:${KIBANA_PORT}
+        -E output.elasticsearch.hosts=["http://${ELASTIC_SEARCH_CONTAINER}:${ELASTIC_SEARCH_PORT}"]
+    healthcheck:
+      interval: 10s
+      retries: 12
+      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://${APM_SERVER_HOST}:${APM_SERVER_PORT}/
+    networks:
+      - dev
+    depends_on:
+      - elasticsearch
+      - kibana
+
+  node:
+    container_name: nodecontainer
+    build:
+      context: .
+      dockerfile: dockerfile
+      target: development
+    image: node:v1.0.0
+    volumes:
+      - .:/app
+    ports:
+      - ${SERVER_PORT}:${SERVER_PORT}
+    expose:
+      - ${SERVER_PORT}
+    environment:
+      SERVICE_NAME: nodeservice
+      SERVER_PORT: ${SERVER_PORT}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_PORT: ${REDIS_PORT}
+    restart: on-failure
+    networks:
+      - dev
+    depends_on:
+      - redis
+
+networks:
+  dev:
+    driver: bridge
+
+volumes:
+  dev_volume: null
+

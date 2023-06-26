@@ -4,6 +4,7 @@
 
 - APM Server
 - KeyCloak
+- Kong
 - RabbitMQ
 - Redis
 

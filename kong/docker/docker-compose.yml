@@ -1,0 +1,113 @@
+version: '3.4'
+networks:
+  backend:
+services:
+  kongdb:
+    container_name: kong-database
+    image: postgres:13
+    hostname: kongdb
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=kong
+      - POSTGRES_DB=kong
+      - POSTGRES_PASSWORD=kong
+    networks:
+      - backend
+    restart: on-failure
+
+  kong-migrations:
+    image: kong:3.2.0
+    command: kong migrations bootstrap
+    links:
+      - kongdb:kongdb
+    depends_on:
+      - kongdb
+    environment:
+      - KONG_DATABASE=postgres
+      - KONG_PG_HOST=kong-database
+      - KONG_PG_USER=kong
+      - KONG_PG_PASSWORD=kong
+    networks:
+      - backend
+    restart: on-failure
+
+  kong:
+    container_name: api-gateway
+    image: kong:3.2.0
+    hostname: api-gateway
+    ports:
+      - 8000:8000
+      - 8443:8443
+      - 8001:8001
+      - 8444:8444
+      - 8002:8002
+      - 8445:8445
+      - 8003:8003
+      - 8004:8004
+    environment:
+      - KONG_DATABASE=postgres
+      - KONG_PG_HOST=kong-database
+      - KONG_PG_USER=kong
+      - KONG_PG_PASSWORD=kong
+      - KONG_PROXY_ACCESS_LOG=/dev/stdout
+      - KONG_ADMIN_ACCESS_LOG=/dev/stdout
+      - KONG_PROXY_ERROR_LOG=/dev/stderr
+      - KONG_ADMIN_ERROR_LOG=/dev/stderr
+      - KONG_ADMIN_LISTEN=0.0.0.0:8001, 0.0.0.0:8444 ssl
+      - KONG_ADMIN_GUI_URL=http://localhost:8002
+    networks:
+      - backend
+    restart: on-failure
+
+  busybox:
+    container_name: busybox
+    image: busybox:latest
+    hostname: busybox
+    stdin_open: true
+    tty: true
+    networks:
+      - backend
+    restart: on-failure
+
+  elasticsearch:
+    container_name: elasticsearch
+    image: elasticsearch:8.7.1
+    hostname: elasticsearch
+    ports:
+      - 9200:9200
+      - 9300:9300
+    networks:
+      - backend
+    environment:
+      - ELASTIC_USERNAME=elastic
+      - ELASTIC_PASSWORD=Salam_123
+      - bootstrap.memory_lock=true
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      # allow running with low disk space
+      - cluster.routing.allocation.disk.threshold_enabled=false
+      - 'ES_JAVA_OPTS=-Xms512m -Xmx512m'
+    restart: always
+
+  keycloak:
+    container_name: keycloak
+    image: keycloak/keycloak:21.1.1
+    command: start-dev
+    hostname: keycloak
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+    ports:
+      - 50801:8080
+    networks:
+      - backend
+    restart: on-failure
+  apigateway:
+    image: ${DOCKER_REGISTRY-}apigateway
+    build:
+      context: .
+      dockerfile: dockerfile
+    hostname: ocelot_gateway
+    networks:
+      - backend

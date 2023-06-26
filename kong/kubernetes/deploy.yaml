@@ -1,0 +1,98 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kong-migrations
+spec:
+  template:
+    metadata:
+      name: kong-migrations
+    spec:
+      containers:
+        - name: kong-migrations
+          image: kong:3.2
+          command: ['kong', 'migrations', 'bootstrap']
+          env:
+            - name: KONG_DATABASE
+              value: 'postgres'
+            - name: KONG_PG_HOST
+              value: '10.98.111.56'
+            - name: KONG_PG_PORT
+              value: '5434'
+            - name: KONG_PG_USER
+              value: 'admin'
+            - name: KONG_PG_PASSWORD
+              value: '123456dev'
+            - name: KONG_USER
+              value: 'admin'
+            - name: KONG_PASSWORD
+              value: '123456dev'
+            - name: KONG_ADMIN_LISTEN
+              value: '0.0.0.0:8001, 0.0.0.0:8444 ssl'
+          imagePullPolicy: Always
+      restartPolicy: OnFailure
+  parallelism: 1
+  completions: 1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong-proxy
+spec:
+  selector:
+    app: kong-proxy
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8002
+    - name: https
+      port: 443
+      targetPort: 8443
+    - name: admin-api
+      port: 8001
+      targetPort: 8001
+    - name: admin-api-ssl
+      port: 8444
+      targetPort: 8444
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kong-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kong-proxy
+  template:
+    metadata:
+      labels:
+        app: kong-proxy
+    spec:
+      containers:
+        - name: kong-proxy
+          image: kong:3.2
+          env:
+            - name: KONG_DATABASE
+              value: 'postgres'
+            - name: KONG_PG_HOST
+              value: '10.98.111.56'
+            - name: KONG_PG_NAME
+              value: 'kong'
+            - name: KONG_PG_PORT
+              value: '5434'
+            - name: KONG_PG_USER
+              value: 'admin'
+            - name: KONG_PG_PASSWORD
+              value: '123456dev'
+            - name: KONG_ADMIN_LISTEN
+              value: '0.0.0.0:8001, 0.0.0.0:8444 ssl'
+          ports:
+            - containerPort: 8000
+            - containerPort: 8443
+            - containerPort: 8001
+            - containerPort: 8444
+            - containerPort: 8002
+            - containerPort: 8445
+            - containerPort: 8003
+            - containerPort: 8004

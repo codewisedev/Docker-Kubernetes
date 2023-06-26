@@ -2,6 +2,7 @@
 
 ## Stacks List
 
+- KeyCloak
 - RabbitMQ
 - Redis
 
